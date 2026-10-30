@@ -15,13 +15,23 @@ let busy = false;
 let userLocation = null;
 let locationStatus = "loading";
 
+// Persistent browser identity
+let userId = localStorage.getItem("ai_m_user_id");
+
+if (!userId) {
+  userId = crypto.randomUUID();
+  localStorage.setItem("ai_m_user_id", userId);
+}
+
 const locationBox = document.createElement("div");
+
 locationBox.style.cssText = `
   padding: 9px 12px;
   font-size: 13px;
   opacity: .85;
   text-align: center;
 `;
+
 form.parentNode.insertBefore(locationBox, form);
 
 function updateLocationStatus(text) {
@@ -31,11 +41,13 @@ function updateLocationStatus(text) {
 function getUserLocation() {
   if (!navigator.geolocation) {
     locationStatus = "unavailable";
+
     updateLocationStatus(
       english
         ? "📍 Location is not supported by this browser"
         : "📍 المتصفح لا يدعم تحديد الموقع"
     );
+
     return;
   }
 
@@ -60,8 +72,6 @@ function getUserLocation() {
           ? "📍 Location detected successfully"
           : "📍 تم تحديد موقعك بنجاح"
       );
-
-      console.log("AI M location status:", locationStatus);
     },
     (error) => {
       userLocation = null;
@@ -78,7 +88,7 @@ function getUserLocation() {
       } else if (error.code === error.TIMEOUT) {
         text = english
           ? "📍 Location request timed out"
-          : "📍 انتهت مهلة تحديد الموقع. حاول مرة أخرى.";
+          : "📍 انتهت مهلة تحديد الموقع.";
       }
 
       updateLocationStatus(text);
@@ -132,6 +142,7 @@ function updateLanguage() {
 
 function addMessage(role, text) {
   const div = document.createElement("div");
+
   div.className = "message " + role;
   div.textContent = text;
 
@@ -185,6 +196,7 @@ function updateCurrentChat() {
 
 function openChat(id) {
   const chat = chats.find((item) => item.id === id);
+
   if (!chat) return;
 
   currentChatId = chat.id;
@@ -226,7 +238,7 @@ async function sendMessage(text) {
   }
 
   const history = currentChat
-    .slice(-10)
+    .slice(-12)
     .map((item) => ({
       role: item.role === "bot" ? "assistant" : "user",
       text: item.text
@@ -253,7 +265,8 @@ async function sendMessage(text) {
       body: JSON.stringify({
         message: text,
         history,
-        location: userLocation
+        location: userLocation,
+        userId
       })
     });
 
@@ -280,11 +293,11 @@ async function sendMessage(text) {
     loading.textContent = english
       ? "Connection error. Please try again."
       : "حصل خطأ أثناء الاتصال بـ AI M. حاول مرة تانية.";
+  } finally {
+    busy = false;
+    $("sendBtn").disabled = false;
+    input.focus();
   }
-
-  busy = false;
-  $("sendBtn").disabled = false;
-  input.focus();
 }
 
 form.addEventListener("submit", (event) => {
@@ -300,6 +313,7 @@ form.addEventListener("submit", (event) => {
 
 input.addEventListener("input", () => {
   input.style.height = "auto";
+
   input.style.height =
     Math.min(input.scrollHeight, 150) + "px";
 });
