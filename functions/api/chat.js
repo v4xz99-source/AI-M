@@ -2,39 +2,56 @@
 const MODEL = "@cf/zai-org/glm-4.7-flash";
 
 const SYSTEM_PROMPT = `
-You are AI M, an intelligent, helpful and accurate AI assistant.
+You are AI M, a powerful, intelligent and reliable AI assistant.
+
+IDENTITY:
+- Your name is AI M.
+- You are the user's personal AI assistant.
+- Never confuse the user's name with a question.
+- Never invent the user's name or personal information.
 
 LANGUAGE:
-- Reply in the same language the user uses.
-- Understand Egyptian Arabic and Modern Standard Arabic.
-- Use natural, fluent Arabic when the user writes Arabic.
-- Do not produce random, broken or meaningless text.
+- Reply in the same language as the user.
+- Understand Egyptian Arabic, Modern Standard Arabic and English.
+- Use natural, fluent Egyptian Arabic when appropriate.
+- Avoid awkward translations and broken sentences.
 
-PERSONALITY:
-- Be friendly, natural and conversational.
-- Be professional when needed.
-- Avoid unnecessary introductions and repetition.
+MEMORY AND CONTEXT:
+- Carefully read the entire conversation history provided to you.
+- Remember facts the user explicitly shared earlier in the conversation.
+- If the user asks "What is my name?", find their name in previous messages.
+- If the user says "My name is Ahmed", remember that name in the conversation.
+- Distinguish questions from statements.
+- Only update personal information when the user clearly corrects or changes it.
+- Never pretend to remember information that is not in the conversation.
 
 INTELLIGENCE:
-- Understand the user's intent and conversation context.
-- Explain difficult topics step by step.
-- Solve math and science problems carefully.
-- Help with programming and debugging.
-- Give practical and useful answers.
-- Never invent facts, sources or search results.
-- Clearly admit uncertainty when information is unavailable.
+- Understand the user's actual intention, not just individual words.
+- Reason carefully before answering.
+- Solve mathematical and scientific problems step by step.
+- Write, explain, debug and improve code.
+- Give accurate, useful and practical answers.
+- Explain difficult topics simply.
+- Admit uncertainty instead of inventing facts.
 
-LOCATION RULES:
-- Use location information only when it is provided.
-- Never guess the user's country, city, neighborhood or street.
-- Distinguish GPS coordinates from a mapped address.
-- If location is unavailable, say so clearly.
-- A mapped address may be approximate.
-- Never claim to have searched for nearby places unless actual search results were provided.
+BEHAVIOR:
+- Be friendly, natural and conversational.
+- Avoid unnecessary introductions.
+- Do not repeat the user's question.
+- Keep simple answers short.
+- Give detailed explanations when the task needs them.
+- Follow the user's instructions carefully.
 
-IMPORTANT:
-- You are AI M.
-- You must prioritize accuracy, clarity and usefulness.
+TOOLS AND HONESTY:
+- Never claim to search the internet unless a search tool was actually used.
+- Never claim to execute an action unless a tool actually executed it.
+- Never invent sources, links, files or results.
+- If a capability is unavailable, explain that honestly.
+
+LOCATION:
+- Only use location information explicitly provided to you.
+- Never guess the user's address or location.
+- Explain when location information is unavailable.
 `;
 
 function wantsLocation(message) {
@@ -87,17 +104,8 @@ async function getAddress(location) {
     displayName: data.display_name || null,
     country: a.country || null,
     state: a.state || a.governorate || null,
-    city:
-      a.city ||
-      a.town ||
-      a.village ||
-      a.municipality ||
-      null,
-    suburb:
-      a.suburb ||
-      a.neighbourhood ||
-      a.quarter ||
-      null,
+    city: a.city || a.town || a.village || a.municipality || null,
+    suburb: a.suburb || a.neighbourhood || a.quarter || null,
     road: a.road || null
   };
 }
@@ -133,7 +141,6 @@ export async function onRequestPost({ request, env }) {
     }
 
     const body = await request.json();
-
     const message = body.message;
 
     const history = Array.isArray(body.history)
@@ -160,7 +167,7 @@ export async function onRequestPost({ request, env }) {
 
           if (address) {
             locationContext = `
-LOCATION INFORMATION FROM BROWSER GPS AND REVERSE GEOCODING:
+LOCATION INFORMATION:
 
 Country: ${address.country || "Unknown"}
 Region: ${address.state || "Unknown"}
@@ -169,24 +176,23 @@ Neighborhood: ${address.suburb || "Unknown"}
 Street: ${address.road || "Not available"}
 Mapped address: ${address.displayName || "Not available"}
 
-These details were obtained by reverse geocoding browser-provided GPS coordinates.
-Some fields may be approximate or unavailable.
+This information comes from reverse geocoding.
+Some fields may be approximate.
 Never invent missing details.
 `;
-
           } else {
             locationContext =
-              "Location lookup returned no mapped address. Do not guess the user's location.";
+              "Location lookup returned no address. Do not guess.";
           }
         } catch (error) {
-          console.error("AI M geocoding error:", error);
+          console.error("Geocoding error:", error);
 
           locationContext =
-            "Location lookup failed. Tell the user that the location could not be retrieved. Do not guess.";
+            "Location lookup failed. Tell the user honestly.";
         }
       } else {
         locationContext =
-          "The user's GPS location is unavailable. Do not guess their location.";
+          "GPS location is unavailable. Do not guess the user's location.";
       }
     }
 
@@ -196,10 +202,10 @@ Never invent missing details.
         ["user", "assistant"].includes(item.role) &&
         typeof item.text === "string"
       )
-      .slice(-10)
+      .slice(-12)
       .map(item => ({
         role: item.role,
-        content: item.text.slice(0, 4000)
+        content: item.text.slice(0, 3000)
       }));
 
     const messages = [
@@ -225,17 +231,17 @@ Never invent missing details.
 
     const result = await env.AI.run(MODEL, {
       messages,
-      max_completion_tokens: 1500
+      max_completion_tokens: 700
     });
 
     const reply = extractReply(result);
 
     if (!reply || !reply.trim()) {
-      console.error("AI M empty model response:", result);
+      console.error("Empty model response:", result);
 
       return Response.json(
         {
-          reply: "وصلني رد غير مكتمل من محرك الذكاء الاصطناعي. حاول مرة أخرى."
+          reply: "لم يصل رد مكتمل من محرك الذكاء الاصطناعي. حاول مرة أخرى."
         },
         { status: 502 }
       );
