@@ -1,6 +1,12 @@
+
 name = "ai-m"
 pages_build_output_dir = "./public"
 compatibility_date = "2026-10-30"
 
 [ai]
 binding = "AI"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ai-m-memory"
+database_id = "a839b1e6-a1e1-4828-87ae-ae01078c8870"
