@@ -21,8 +21,13 @@ function updateLanguage() {
     el.textContent = english ? el.dataset.en : el.dataset.ar;
   });
 
-  input.placeholder = english ? "Type your message..." : "اكتب رسالتك هنا...";
-  $("languageBtn").textContent = english ? "🌐 العربية" : "🌐 English";
+  input.placeholder = english
+    ? "Type your message..."
+    : "اكتب رسالتك هنا...";
+
+  $("languageBtn").textContent = english
+    ? "🌐 العربية"
+    : "🌐 English";
 }
 
 function addMessage(role, text) {
@@ -30,6 +35,7 @@ function addMessage(role, text) {
   div.className = "message " + role;
   div.textContent = text;
   messages.appendChild(div);
+
   $("chatArea").scrollTop = $("chatArea").scrollHeight;
   return div;
 }
@@ -49,13 +55,17 @@ function renderHistory() {
 function saveCurrentChat() {
   if (!currentChat.length) return;
 
-  const title = currentChat.find(m => m.role === "user")?.text || "محادثة جديدة";
+  const title =
+    currentChat.find(m => m.role === "user")?.text ||
+    "محادثة جديدة";
+
   chats.unshift({
     title: title.slice(0, 35),
     messages: [...currentChat]
   });
 
   if (chats.length > 20) chats.pop();
+
   currentChat = [];
   renderHistory();
 }
@@ -66,6 +76,7 @@ function openChat(index) {
   welcome.hidden = true;
 
   currentChat.forEach(m => addMessage(m.role, m.text));
+
   $("sidebar").classList.remove("open");
 }
 
@@ -78,6 +89,7 @@ function newChat() {
 
 async function sendMessage(text) {
   text = text.trim();
+
   if (!text || busy) return;
 
   welcome.hidden = true;
@@ -87,33 +99,55 @@ async function sendMessage(text) {
   addMessage("user", text);
   currentChat.push({ role: "user", text });
 
-  const loading = addMessage("bot", english ? "Thinking..." : "جاري التفكير...");
+  const loading = addMessage(
+    "bot",
+    english ? "Thinking..." : "جاري التفكير..."
+  );
 
   try {
+    const history = currentChat
+      .slice(0, -1)
+      .slice(-10)
+      .map(m => ({
+        role: m.role === "bot" ? "assistant" : "user",
+        text: m.text
+      }));
+
     const response = await fetch("/api/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text })
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: text,
+        history
+      })
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || data.reply || "Server error");
+      throw new Error(data.reply || "Server error");
     }
 
-    loading.textContent = data.reply || "No response";
-    currentChat.push({ role: "bot", text: loading.textContent });
+    loading.textContent =
+      data.reply || "No response";
+
+    currentChat.push({
+      role: "bot",
+      text: loading.textContent
+    });
 
   } catch (error) {
     loading.textContent = english
-      ? "The AI service is not connected yet. Please configure the server provider."
-      : "خدمة الذكاء الاصطناعي غير متصلة حاليًا. لازم نضيف مزود الذكاء الاصطناعي للخادم.";
+      ? "Something went wrong. Please try again."
+      : "حصل خطأ أثناء الاتصال. حاول مرة تانية.";
 
     console.error(error);
   }
 
   saveCurrentChat();
+
   busy = false;
   $("sendBtn").disabled = false;
   input.focus();
@@ -121,15 +155,18 @@ async function sendMessage(text) {
 
 form.addEventListener("submit", event => {
   event.preventDefault();
+
   const text = input.value;
   input.value = "";
   input.style.height = "auto";
+
   sendMessage(text);
 });
 
 input.addEventListener("input", () => {
   input.style.height = "auto";
-  input.style.height = Math.min(input.scrollHeight, 150) + "px";
+  input.style.height =
+    Math.min(input.scrollHeight, 150) + "px";
 });
 
 $("newChat").onclick = newChat;
@@ -150,7 +187,11 @@ $("languageBtn").onclick = () => {
 
 document.querySelectorAll(".suggestion").forEach(button => {
   button.onclick = () => {
-    sendMessage(english ? button.dataset.promptEn : button.dataset.promptAr);
+    sendMessage(
+      english
+        ? button.dataset.promptEn
+        : button.dataset.promptAr
+    );
   };
 });
 
