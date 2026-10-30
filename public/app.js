@@ -11,6 +11,50 @@ let chats = [];
 let currentChat = [];
 let english = false;
 let busy = false;
+let userLocation = null;
+
+const locationStatus = document.createElement("div");
+locationStatus.style.cssText =
+  "padding:8px 12px;font-size:13px;opacity:.8;text-align:center;";
+locationStatus.textContent = "📍 جاري تحديد موقعك...";
+form.parentNode.insertBefore(locationStatus, form);
+
+function updateLocationStatus(message) {
+  locationStatus.textContent = message;
+}
+
+function getUserLocation() {
+  if (!("geolocation" in navigator)) {
+    updateLocationStatus("📍 متصفحك لا يدعم تحديد الموقع");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      userLocation = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy
+      };
+
+      updateLocationStatus("📍 تم تحديد موقعك بنجاح");
+    },
+    (error) => {
+      userLocation = null;
+
+      if (error.code === error.PERMISSION_DENIED) {
+        updateLocationStatus("📍 إذن الموقع مرفوض. فعّله من إعدادات المتصفح.");
+      } else {
+        updateLocationStatus("📍 لم نتمكن من تحديد موقعك. حاول مرة أخرى.");
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 300000
+    }
+  );
+}
 
 function updateLanguage() {
   document.documentElement.lang = english ? "en" : "ar";
@@ -76,7 +120,6 @@ function openChat(index) {
   welcome.hidden = true;
 
   currentChat.forEach(m => addMessage(m.role, m.text));
-
   $("sidebar").classList.remove("open");
 }
 
@@ -96,6 +139,13 @@ async function sendMessage(text) {
   busy = true;
   $("sendBtn").disabled = true;
 
+  const history = currentChat
+    .slice(-12)
+    .map(m => ({
+      role: m.role === "bot" ? "assistant" : "user",
+      text: m.text
+    }));
+
   addMessage("user", text);
   currentChat.push({ role: "user", text });
 
@@ -105,14 +155,6 @@ async function sendMessage(text) {
   );
 
   try {
-    const history = currentChat
-      .slice(0, -1)
-      .slice(-10)
-      .map(m => ({
-        role: m.role === "bot" ? "assistant" : "user",
-        text: m.text
-      }));
-
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: {
@@ -120,7 +162,8 @@ async function sendMessage(text) {
       },
       body: JSON.stringify({
         message: text,
-        history
+        history,
+        location: userLocation
       })
     });
 
@@ -130,8 +173,7 @@ async function sendMessage(text) {
       throw new Error(data.reply || "Server error");
     }
 
-    loading.textContent =
-      data.reply || "No response";
+    loading.textContent = data.reply || "No response";
 
     currentChat.push({
       role: "bot",
@@ -145,8 +187,6 @@ async function sendMessage(text) {
 
     console.error(error);
   }
-
-  saveCurrentChat();
 
   busy = false;
   $("sendBtn").disabled = false;
@@ -196,3 +236,4 @@ document.querySelectorAll(".suggestion").forEach(button => {
 });
 
 updateLanguage();
+getUserLocation();
