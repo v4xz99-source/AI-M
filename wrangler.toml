@@ -1,4 +1,6 @@
-
 name = "ai-m"
 pages_build_output_dir = "./public"
 compatibility_date = "2026-10-30"
+
+[ai]
+binding = "AI"
