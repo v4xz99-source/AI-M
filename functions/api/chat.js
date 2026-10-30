@@ -1,29 +1,40 @@
 
-const MODEL = "@cf/meta/llama-3.2-3b-instruct";
+const MODEL = "@cf/zai-org/glm-4.7-flash";
 
 const SYSTEM_PROMPT = `
-You are AI M, a friendly, intelligent and accurate AI assistant.
+You are AI M, an intelligent, helpful and accurate AI assistant.
+
+LANGUAGE:
+- Reply in the same language the user uses.
+- Understand Egyptian Arabic and Modern Standard Arabic.
+- Use natural, fluent Arabic when the user writes Arabic.
+- Do not produce random, broken or meaningless text.
 
 PERSONALITY:
-- Be friendly, social and conversational.
-- Respond in the same language as the user.
-- Be serious when needed.
+- Be friendly, natural and conversational.
+- Be professional when needed.
+- Avoid unnecessary introductions and repetition.
 
 INTELLIGENCE:
-- Understand the user's intent and context.
+- Understand the user's intent and conversation context.
 - Explain difficult topics step by step.
 - Solve math and science problems carefully.
 - Help with programming and debugging.
-- Never invent facts or pretend to know something.
-- Admit uncertainty when information is unavailable.
+- Give practical and useful answers.
+- Never invent facts, sources or search results.
+- Clearly admit uncertainty when information is unavailable.
 
 LOCATION RULES:
-- Use the location information provided in the conversation.
+- Use location information only when it is provided.
 - Never guess the user's country, city, neighborhood or street.
-- Distinguish GPS coordinates from a reverse-geocoded address.
+- Distinguish GPS coordinates from a mapped address.
 - If location is unavailable, say so clearly.
-- A geocoded address may be approximate, not an exact residence.
-- Never claim to have searched for nearby places unless search results were provided.
+- A mapped address may be approximate.
+- Never claim to have searched for nearby places unless actual search results were provided.
+
+IMPORTANT:
+- You are AI M.
+- You must prioritize accuracy, clarity and usefulness.
 `;
 
 function wantsLocation(message) {
@@ -45,9 +56,7 @@ async function getAddress(location) {
     return null;
   }
 
-  const url = new URL(
-    "https://nominatim.openstreetmap.org/reverse"
-  );
+  const url = new URL("https://nominatim.openstreetmap.org/reverse");
 
   url.searchParams.set("format", "jsonv2");
   url.searchParams.set("lat", String(location.latitude));
@@ -89,9 +98,29 @@ async function getAddress(location) {
       a.neighbourhood ||
       a.quarter ||
       null,
-    road: a.road || null,
-    postcode: a.postcode || null
+    road: a.road || null
   };
+}
+
+function extractReply(result) {
+  if (typeof result?.response === "string") {
+    return result.response;
+  }
+
+  const content = result?.choices?.[0]?.message?.content;
+
+  if (typeof content === "string") {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .filter(item => item && item.type === "text")
+      .map(item => item.text || "")
+      .join("");
+  }
+
+  return null;
 }
 
 export async function onRequestPost({ request, env }) {
@@ -104,7 +133,9 @@ export async function onRequestPost({ request, env }) {
     }
 
     const body = await request.json();
+
     const message = body.message;
+
     const history = Array.isArray(body.history)
       ? body.history
       : [];
@@ -129,31 +160,33 @@ export async function onRequestPost({ request, env }) {
 
           if (address) {
             locationContext = `
-VERIFIED LOCATION INFORMATION:
+LOCATION INFORMATION FROM BROWSER GPS AND REVERSE GEOCODING:
+
 Country: ${address.country || "Unknown"}
 Region: ${address.state || "Unknown"}
 City: ${address.city || "Unknown"}
 Neighborhood: ${address.suburb || "Unknown"}
 Street: ${address.road || "Not available"}
-Full mapped address: ${address.displayName || "Not available"}
+Mapped address: ${address.displayName || "Not available"}
 
-These details come from reverse geocoding of browser-provided GPS coordinates.
-Some address fields may be approximate or unavailable.
-Do not invent missing details.
+These details were obtained by reverse geocoding browser-provided GPS coordinates.
+Some fields may be approximate or unavailable.
+Never invent missing details.
 `;
+
           } else {
             locationContext =
-              "The user requested location information, but no mapped address was returned. Do not guess.";
+              "Location lookup returned no mapped address. Do not guess the user's location.";
           }
         } catch (error) {
-          console.error("Geocoding error:", error);
+          console.error("AI M geocoding error:", error);
 
           locationContext =
-            "Location lookup failed. Tell the user you could not retrieve their address. Do not guess.";
+            "Location lookup failed. Tell the user that the location could not be retrieved. Do not guess.";
         }
       } else {
         locationContext =
-          "The user's GPS location is unavailable or permission was not granted. Do not guess their location.";
+          "The user's GPS location is unavailable. Do not guess their location.";
       }
     }
 
@@ -174,13 +207,16 @@ Do not invent missing details.
         role: "system",
         content: SYSTEM_PROMPT
       },
+
       ...(locationContext
         ? [{
             role: "system",
             content: locationContext
           }]
         : []),
+
       ...safeHistory,
+
       {
         role: "user",
         content: message.trim()
@@ -189,13 +225,24 @@ Do not invent missing details.
 
     const result = await env.AI.run(MODEL, {
       messages,
-      max_tokens: 1500
+      max_completion_tokens: 1500
     });
 
+    const reply = extractReply(result);
+
+    if (!reply || !reply.trim()) {
+      console.error("AI M empty model response:", result);
+
+      return Response.json(
+        {
+          reply: "وصلني رد غير مكتمل من محرك الذكاء الاصطناعي. حاول مرة أخرى."
+        },
+        { status: 502 }
+      );
+    }
+
     return Response.json({
-      reply:
-        result.response ||
-        "مش قادر أجهز رد دلوقتي، جرب تاني."
+      reply: reply.trim()
     });
 
   } catch (error) {
