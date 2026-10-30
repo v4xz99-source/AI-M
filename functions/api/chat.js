@@ -4,58 +4,62 @@ const MODEL = "@cf/zai-org/glm-4.7-flash";
 const SYSTEM_PROMPT = `
 You are AI M, a powerful, intelligent and reliable AI assistant.
 
-IDENTITY:
-- Your name is AI M.
-- You are the user's personal AI assistant.
-- Never confuse the user's name with a question.
-- Never invent the user's name or personal information.
-
 LANGUAGE:
 - Reply in the same language as the user.
-- Understand Egyptian Arabic, Modern Standard Arabic and English.
-- Use natural, fluent Egyptian Arabic when appropriate.
+- Understand Egyptian Arabic and Modern Standard Arabic.
+- Use natural Egyptian Arabic when the user speaks Egyptian Arabic.
 - Avoid awkward translations and broken sentences.
 
-MEMORY AND CONTEXT:
-- Carefully read the entire conversation history provided to you.
-- Remember facts the user explicitly shared earlier in the conversation.
-- If the user asks "What is my name?", find their name in previous messages.
-- If the user says "My name is Ahmed", remember that name in the conversation.
-- Distinguish questions from statements.
-- Only update personal information when the user clearly corrects or changes it.
-- Never pretend to remember information that is not in the conversation.
+MEMORY:
+- Use the saved user information provided in the system context.
+- Remember the user's name and use it naturally.
+- If asked for their name, answer using saved information.
+- Never invent personal information.
+- Do not claim to remember information that is not provided.
 
 INTELLIGENCE:
-- Understand the user's actual intention, not just individual words.
-- Reason carefully before answering.
-- Solve mathematical and scientific problems step by step.
+- Understand the user's actual intention and conversation context.
+- Solve math and science problems carefully.
 - Write, explain, debug and improve code.
-- Give accurate, useful and practical answers.
-- Explain difficult topics simply.
+- Give accurate and practical answers.
+- Explain difficult topics clearly.
 - Admit uncertainty instead of inventing facts.
 
 BEHAVIOR:
-- Be friendly, natural and conversational.
+- Be friendly and conversational.
 - Avoid unnecessary introductions.
-- Do not repeat the user's question.
 - Keep simple answers short.
-- Give detailed explanations when the task needs them.
+- Give detailed explanations when needed.
 - Follow the user's instructions carefully.
 
-TOOLS AND HONESTY:
-- Never claim to search the internet unless a search tool was actually used.
-- Never claim to execute an action unless a tool actually executed it.
-- Never invent sources, links, files or results.
-- If a capability is unavailable, explain that honestly.
+TOOLS:
+- Never claim to search the internet or execute actions unless a real tool was used.
+- Never invent sources or results.
 
 LOCATION:
-- Only use location information explicitly provided to you.
+- Only use location information explicitly provided.
 - Never guess the user's address or location.
-- Explain when location information is unavailable.
 `;
 
 function wantsLocation(message) {
   return /أنا فين|موقعي|مكاني|موقعي الحالي|مكاني الحالي|قريب مني|بالقرب مني|أقرب|المنطقة اللي أنا فيها|عنواني|where am i|my location|near me|nearby|closest/i.test(message);
+}
+
+function extractName(message) {
+  const patterns = [
+    /^(?:أنا\s+)?اسمي\s+([\p{L}][\p{L}\s'-]{0,40})[.!؟،]?$/iu,
+    /^(?:my name is)\s+([\p{L}][\p{L}\s'-]{0,40})[.!?]?$/iu
+  ];
+
+  for (const pattern of patterns) {
+    const match = message.trim().match(pattern);
+
+    if (match) {
+      return match[1].trim().replace(/[.!؟،]+$/, "");
+    }
+  }
+
+  return null;
 }
 
 async function getAddress(location) {
@@ -131,11 +135,44 @@ function extractReply(result) {
   return null;
 }
 
+async function getMemory(db, userId) {
+  const result = await db
+    .prepare(
+      "SELECT memory_key, memory_value FROM user_memory WHERE user_id = ?"
+    )
+    .bind(userId)
+    .all();
+
+  return result.results || [];
+}
+
+async function saveMemory(db, userId, key, value) {
+  await db
+    .prepare(`
+      INSERT INTO user_memory
+        (user_id, memory_key, memory_value, updated_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(user_id, memory_key)
+      DO UPDATE SET
+        memory_value = excluded.memory_value,
+        updated_at = CURRENT_TIMESTAMP
+    `)
+    .bind(userId, key, value)
+    .run();
+}
+
 export async function onRequestPost({ request, env }) {
   try {
     if (!env.AI) {
       return Response.json(
         { reply: "AI M غير متصل بمحرك الذكاء الاصطناعي." },
+        { status: 503 }
+      );
+    }
+
+    if (!env.DB) {
+      return Response.json(
+        { reply: "قاعدة بيانات الذاكرة غير متصلة." },
         { status: 503 }
       );
     }
@@ -146,6 +183,8 @@ export async function onRequestPost({ request, env }) {
     const history = Array.isArray(body.history)
       ? body.history
       : [];
+
+    const userId = body.userId;
 
     if (
       typeof message !== "string" ||
@@ -158,9 +197,40 @@ export async function onRequestPost({ request, env }) {
       );
     }
 
+    if (
+      typeof userId !== "string" ||
+      !/^[0-9a-f-]{36}$/i.test(userId)
+    ) {
+      return Response.json(
+        { reply: "معرّف المستخدم غير صالح. حدّث الصفحة وحاول مرة أخرى." },
+        { status: 400 }
+      );
+    }
+
+    const cleanMessage = message.trim();
+
+    // Save the name only when the user explicitly introduces themselves.
+    const name = extractName(cleanMessage);
+
+    if (name) {
+      await saveMemory(env.DB, userId, "name", name);
+    }
+
+    // Load saved memories.
+    const memories = await getMemory(env.DB, userId);
+
+    const memoryContext = memories.length
+      ? `
+SAVED USER MEMORY:
+${memories.map(item => `${item.memory_key}: ${item.memory_value}`).join("\n")}
+
+Use these saved facts when relevant.
+`
+      : "No saved user information is available yet.";
+
     let locationContext = "";
 
-    if (wantsLocation(message.trim())) {
+    if (wantsLocation(cleanMessage)) {
       if (body.location) {
         try {
           const address = await getAddress(body.location);
@@ -176,7 +246,6 @@ Neighborhood: ${address.suburb || "Unknown"}
 Street: ${address.road || "Not available"}
 Mapped address: ${address.displayName || "Not available"}
 
-This information comes from reverse geocoding.
 Some fields may be approximate.
 Never invent missing details.
 `;
@@ -213,19 +282,20 @@ Never invent missing details.
         role: "system",
         content: SYSTEM_PROMPT
       },
-
+      {
+        role: "system",
+        content: memoryContext
+      },
       ...(locationContext
         ? [{
             role: "system",
             content: locationContext
           }]
         : []),
-
       ...safeHistory,
-
       {
         role: "user",
-        content: message.trim()
+        content: cleanMessage
       }
     ];
 
