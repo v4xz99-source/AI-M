@@ -4,195 +4,191 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#030611">
-  <meta name="description" content="AI M — Enter a new digital universe">
-  <title>AI M — Beyond the Ordinary</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#050611">
+  <meta name="description" content="AI M — ادخل عالم الذكاء الاصطناعي التفاعلي.">
+  <title>AI M — Enter Another World</title>
+
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="/style.css">
 </head>
+
 <body>
   <div class="app">
 
+    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
-      <div class="brand">
-        <div class="logo">M</div>
-        <div class="brand-copy">
-          <span class="brand-name">AI M</span>
-          <span class="brand-subtitle">BEYOND THE ORDINARY</span>
-        </div>
-        <button id="closeSidebar" class="mobile-close" type="button" aria-label="إغلاق القائمة">×</button>
-      </div>
-
-      <button id="newChat" class="new-chat" type="button">
-        <span class="nav-icon">＋</span>
-        <span>محادثة جديدة</span>
+      <button id="closeSidebar" type="button" aria-label="إغلاق القائمة">
+        ✕
       </button>
 
-      <div class="side-label" data-ar="مساحتك الرقمية" data-en="Your universe">
-        مساحتك الرقمية
-      </div>
-
-      <nav class="side-nav">
-        <button class="nav-item active" type="button" data-ar="الرئيسية" data-en="Home">
-          <span class="nav-icon">⌂</span>
-          <span>الرئيسية</span>
-        </button>
-        <button class="nav-item" type="button" data-ar="محادثاتك" data-en="Chats">
-          <span class="nav-icon">▤</span>
-          <span>محادثاتك</span>
-        </button>
-        <button class="nav-item" type="button" data-ar="استكشف" data-en="Explore">
-          <span class="nav-icon">✧</span>
-          <span>استكشف</span>
-        </button>
-      </nav>
-
-      <div class="side-label history-label" data-ar="سجل المحادثات" data-en="Recent conversations">
-        سجل المحادثات
-      </div>
-      <div id="history" class="history"></div>
-
-      <div class="side-bottom">
-        <button id="languageBtn" type="button">
-          <span class="nav-icon">◎</span>
-          <span>🌐 English</span>
-        </button>
-        <div class="profile">
-          <div class="profile-avatar">M</div>
-          <div class="profile-copy">
-            <strong>AI M</strong>
-            <span><i class="online-dot"></i> Assistant Online</span>
-          </div>
+      <div class="brand">
+        <div class="brand-icon">M</div>
+        <div>
+          <div class="brand-name">AI M</div>
+          <div class="brand-subtitle">BEYOND THE KNOWN</div>
         </div>
+      </div>
+
+      <button id="newChat" type="button">
+        <span>＋</span>
+        <span data-ar="محادثة جديدة" data-en="New conversation">محادثة جديدة</span>
+      </button>
+
+      <div class="sidebar-label"
+           data-ar="محادثاتك" data-en="YOUR CONVERSATIONS">
+        محادثاتك
+      </div>
+
+      <div id="history"></div>
+
+      <div class="sidebar-bottom">
+        <button id="languageBtn" type="button">🌐 English</button>
       </div>
     </aside>
 
+    <!-- Main application -->
     <main class="main">
-      <header class="topbar">
-        <button id="menuBtn" class="icon-btn menu-btn" type="button" aria-label="فتح القائمة">☰</button>
 
-        <div class="top-brand">
-          <span class="top-brand-symbol">M</span>
-          <span>AI M</span>
-          <span class="top-status"></span>
+      <!-- Top navigation -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="menuBtn" type="button" aria-label="فتح القائمة">
+            ☰
+          </button>
+
+          <div class="top-brand">AI M</div>
+
+          <div class="universe-label"
+               data-ar="عالم بلا حدود"
+               data-en="A LIMITLESS WORLD">
+            عالم بلا حدود
+          </div>
         </div>
 
-        <div class="top-actions">
-          <span class="universe-label">DIGITAL UNIVERSE</span>
-          <button id="clearBtn" class="icon-btn" type="button" aria-label="مسح المحادثة">⌫</button>
+        <div class="topbar-right">
+          <button id="clearBtn" type="button"
+                  data-ar="＋ جديد"
+                  data-en="＋ New">
+            ＋ جديد
+          </button>
         </div>
       </header>
 
+      <!-- Chat and welcome area -->
       <section class="chat-area" id="chatArea">
-        <div class="universe-caption" aria-hidden="true">
-          <span class="caption-line"></span>
-          <span>BEYOND THE ORDINARY</span>
-          <span class="caption-line"></span>
+        <div class="universe-caption"
+             data-ar="بوابة AI M · العالم التفاعلي"
+             data-en="AI M GATE · INTERACTIVE WORLD">
+          بوابة AI M · العالم التفاعلي
         </div>
 
-        <div class="welcome" id="welcome">
+        <!-- Welcome screen -->
+        <section id="welcome">
           <div class="core-emblem" aria-hidden="true">
-            <div class="core-orbit orbit-one"></div>
-            <div class="core-orbit orbit-two"></div>
-            <div class="core-orbit orbit-three"></div>
-            <div class="core-halo"></div>
-            <div class="core-letter">M</div>
+            <span class="core-letter">M</span>
           </div>
 
-          <div class="welcome-kicker">
-            <span class="kicker-dot"></span>
-            YOUR PERSONAL INTELLIGENCE
-          </div>
-
-          <h1 data-ar="مرحبًا بك في <span>AI M</span>" data-en="Welcome to <span>AI M</span>">
-            مرحبًا بك في <span>AI M</span>
+          <h1>
+            <span>AI</span> M
           </h1>
 
           <p class="welcome-description"
-             data-ar="عالم جديد. أفكار بلا حدود. ابدأ رحلتك."
-             data-en="A new universe. Limitless ideas. Begin your journey.">
-            عالم جديد. أفكار بلا حدود. ابدأ رحلتك.
+             data-ar="عالم جديد يبدأ من هنا. اسأل، اكتشف، وابنِ أفكارك داخل تجربة ذكاء اصطناعي مختلفة."
+             data-en="A new world begins here. Ask, explore, and build your ideas in a different AI experience.">
+            عالم جديد يبدأ من هنا. اسأل، اكتشف، وابنِ أفكارك داخل تجربة ذكاء اصطناعي مختلفة.
           </p>
 
+          <!-- Suggested prompts -->
           <div class="suggestions">
             <button class="suggestion" type="button"
-              data-prompt-ar="اكتب لي خطة لتعلم البرمجة"
-              data-prompt-en="Write me a programming learning plan">
-              <span class="suggestion-icon">⌘</span>
-              <span class="suggestion-copy">
-                <strong>تعلم البرمجة</strong>
-                <small>ابدأ ببناء أفكارك</small>
-              </span>
-              <span class="suggestion-arrow">↗</span>
+              data-prompt-ar="عرّفني بنفسك، وإيه اللي تقدر تساعدني فيه؟"
+              data-prompt-en="Introduce yourself and tell me how you can help.">
+              عرّفني بنفسك، وإيه اللي تقدر تساعدني فيه؟
             </button>
 
             <button class="suggestion" type="button"
-              data-prompt-ar="اشرح لي الذكاء الاصطناعي"
-              data-prompt-en="Explain artificial intelligence">
-              <span class="suggestion-icon">✧</span>
-              <span class="suggestion-copy">
-                <strong>الذكاء الاصطناعي</strong>
-                <small>اكتشف إمكانيات جديدة</small>
-              </span>
-              <span class="suggestion-arrow">↗</span>
+              data-prompt-ar="ساعدني أحوّل فكرة عندي لمشروع حقيقي."
+              data-prompt-en="Help me turn an idea into a real project.">
+              ساعدني أحوّل فكرة عندي لمشروع حقيقي.
             </button>
 
             <button class="suggestion" type="button"
-              data-prompt-ar="ساعدني في كتابة مشروع"
-              data-prompt-en="Help me write a project">
-              <span class="suggestion-icon">⌁</span>
-              <span class="suggestion-copy">
-                <strong>إنشاء مشروع</strong>
-                <small>حوّل فكرتك إلى واقع</small>
-              </span>
-              <span class="suggestion-arrow">↗</span>
+              data-prompt-ar="اشرحلي موضوع صعب بطريقة بسيطة."
+              data-prompt-en="Explain a difficult topic in a simple way.">
+              اشرحلي موضوع صعب بطريقة بسيطة.
             </button>
 
             <button class="suggestion" type="button"
-              data-prompt-ar="اقترح أفكارًا جديدة"
-              data-prompt-en="Suggest some new ideas">
-              <span class="suggestion-icon">✳</span>
-              <span class="suggestion-copy">
-                <strong>أفكار جديدة</strong>
-                <small>فكّر خارج الحدود</small>
-              </span>
-              <span class="suggestion-arrow">↗</span>
+              data-prompt-ar="خلينا نبدأ محادثة جديدة."
+              data-prompt-en="Let's start a new conversation.">
+              خلينا نبدأ محادثة جديدة.
             </button>
           </div>
-        </div>
+        </section>
 
-        <div id="messages" class="messages"></div>
+        <!-- Messages are inserted here by app.js -->
+        <div class="messages" id="messages" aria-live="polite"></div>
       </section>
 
+      <!-- Message composer -->
       <footer class="composer-wrap">
         <div class="composer-aura" aria-hidden="true"></div>
 
         <form id="chatForm" class="composer">
-          <span class="composer-mark" aria-hidden="true">✧</span>
-
           <textarea
             id="messageInput"
+            name="message"
             rows="1"
-            placeholder="اكتب رسالتك إلى AI M..."
+            maxlength="12000"
+            placeholder="اكتب رسالتك هنا..."
             aria-label="رسالتك"
+            autocomplete="off"
+            required
           ></textarea>
 
-          <button class="attach-btn" type="button" aria-label="إضافة">＋</button>
-          <button id="sendBtn" type="submit" aria-label="إرسال">➤</button>
+          <button
+            id="sendBtn"
+            type="submit"
+            aria-label="إرسال الرسالة"
+            title="إرسال"
+          >
+            <svg
+              width="21"
+              height="21"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M5 12L19 5L14 19L11.5 12.5L5 12Z"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M11.5 12.5L19 5"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
         </form>
 
-        <p class="disclaimer"
-           data-ar="AI M قد يخطئ أحيانًا؛ راجع المعلومات المهمة."
-           data-en="AI M can make mistakes. Check important information.">
-          AI M قد يخطئ أحيانًا؛ راجع المعلومات المهمة.
-        </p>
+        <div class="disclaimer"
+          data-ar="AI M قد يخطئ أحيانًا. راجع المعلومات المهمة."
+          data-en="AI M can make mistakes. Check important information.">
+          AI M قد يخطئ أحيانًا. راجع المعلومات المهمة.
+        </div>
       </footer>
+
     </main>
   </div>
 
+  <!-- 3D world -->
   <script type="module" src="/room3d.js"></script>
+
+  <!-- Chat application -->
   <script src="/app.js"></script>
 </body>
 </html>
