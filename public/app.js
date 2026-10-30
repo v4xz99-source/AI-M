@@ -9,25 +9,41 @@ const historyBox = $("history");
 
 let chats = [];
 let currentChat = [];
+let currentChatId = null;
 let english = false;
 let busy = false;
 let userLocation = null;
+let locationStatus = "loading";
 
-const locationStatus = document.createElement("div");
-locationStatus.style.cssText =
-  "padding:8px 12px;font-size:13px;opacity:.8;text-align:center;";
-locationStatus.textContent = "📍 جاري تحديد موقعك...";
-form.parentNode.insertBefore(locationStatus, form);
+const locationBox = document.createElement("div");
+locationBox.style.cssText = `
+  padding: 9px 12px;
+  font-size: 13px;
+  opacity: .85;
+  text-align: center;
+`;
+form.parentNode.insertBefore(locationBox, form);
 
-function updateLocationStatus(message) {
-  locationStatus.textContent = message;
+function updateLocationStatus(text) {
+  locationBox.textContent = text;
 }
 
 function getUserLocation() {
-  if (!("geolocation" in navigator)) {
-    updateLocationStatus("📍 متصفحك لا يدعم تحديد الموقع");
+  if (!navigator.geolocation) {
+    locationStatus = "unavailable";
+    updateLocationStatus(
+      english
+        ? "📍 Location is not supported by this browser"
+        : "📍 المتصفح لا يدعم تحديد الموقع"
+    );
     return;
   }
+
+  updateLocationStatus(
+    english
+      ? "📍 Waiting for location permission..."
+      : "📍 في انتظار إذن تحديد الموقع..."
+  );
 
   navigator.geolocation.getCurrentPosition(
     (position) => {
@@ -37,20 +53,40 @@ function getUserLocation() {
         accuracy: position.coords.accuracy
       };
 
-      updateLocationStatus("📍 تم تحديد موقعك بنجاح");
+      locationStatus = "ready";
+
+      updateLocationStatus(
+        english
+          ? "📍 Location detected successfully"
+          : "📍 تم تحديد موقعك بنجاح"
+      );
+
+      console.log("AI M location status:", locationStatus);
     },
     (error) => {
       userLocation = null;
+      locationStatus = "denied";
+
+      let text = english
+        ? "📍 Location unavailable"
+        : "📍 الموقع غير متاح";
 
       if (error.code === error.PERMISSION_DENIED) {
-        updateLocationStatus("📍 إذن الموقع مرفوض. فعّله من إعدادات المتصفح.");
-      } else {
-        updateLocationStatus("📍 لم نتمكن من تحديد موقعك. حاول مرة أخرى.");
+        text = english
+          ? "📍 Location permission denied"
+          : "📍 إذن الموقع مرفوض. فعّله من إعدادات المتصفح.";
+      } else if (error.code === error.TIMEOUT) {
+        text = english
+          ? "📍 Location request timed out"
+          : "📍 انتهت مهلة تحديد الموقع. حاول مرة أخرى.";
       }
+
+      updateLocationStatus(text);
+      console.error("Location error:", error);
     },
     {
       enableHighAccuracy: true,
-      timeout: 15000,
+      timeout: 20000,
       maximumAge: 300000
     }
   );
@@ -61,7 +97,7 @@ function updateLanguage() {
   document.documentElement.dir = english ? "ltr" : "rtl";
   document.body.classList.toggle("english", english);
 
-  document.querySelectorAll("[data-ar]").forEach(el => {
+  document.querySelectorAll("[data-ar]").forEach((el) => {
     el.textContent = english ? el.dataset.en : el.dataset.ar;
   });
 
@@ -72,62 +108,108 @@ function updateLanguage() {
   $("languageBtn").textContent = english
     ? "🌐 العربية"
     : "🌐 English";
+
+  if (locationStatus === "ready") {
+    updateLocationStatus(
+      english
+        ? "📍 Location detected successfully"
+        : "📍 تم تحديد موقعك بنجاح"
+    );
+  } else if (locationStatus === "denied") {
+    updateLocationStatus(
+      english
+        ? "📍 Location unavailable"
+        : "📍 الموقع غير متاح"
+    );
+  } else {
+    updateLocationStatus(
+      english
+        ? "📍 Waiting for location..."
+        : "📍 جاري تحديد موقعك..."
+    );
+  }
 }
 
 function addMessage(role, text) {
   const div = document.createElement("div");
   div.className = "message " + role;
   div.textContent = text;
+
   messages.appendChild(div);
 
   $("chatArea").scrollTop = $("chatArea").scrollHeight;
+
   return div;
 }
 
 function renderHistory() {
   historyBox.replaceChildren();
 
-  chats.forEach((chat, index) => {
+  chats.forEach((chat) => {
     const button = document.createElement("button");
+
     button.className = "history-item";
     button.textContent = chat.title;
-    button.onclick = () => openChat(index);
+
+    button.onclick = () => openChat(chat.id);
+
     historyBox.appendChild(button);
   });
 }
 
-function saveCurrentChat() {
+function updateCurrentChat() {
   if (!currentChat.length) return;
 
+  let chat = chats.find((item) => item.id === currentChatId);
+
   const title =
-    currentChat.find(m => m.role === "user")?.text ||
-    "محادثة جديدة";
+    currentChat.find((item) => item.role === "user")?.text ||
+    (english ? "New chat" : "محادثة جديدة");
 
-  chats.unshift({
-    title: title.slice(0, 35),
-    messages: [...currentChat]
-  });
+  if (!chat) {
+    chat = {
+      id: currentChatId || String(Date.now()),
+      title: title.slice(0, 35),
+      messages: []
+    };
 
-  if (chats.length > 20) chats.pop();
+    currentChatId = chat.id;
+    chats.unshift(chat);
+  }
 
-  currentChat = [];
+  chat.title = title.slice(0, 35);
+  chat.messages = [...currentChat];
+
   renderHistory();
 }
 
-function openChat(index) {
-  currentChat = [...chats[index].messages];
+function openChat(id) {
+  const chat = chats.find((item) => item.id === id);
+  if (!chat) return;
+
+  currentChatId = chat.id;
+  currentChat = [...chat.messages];
+
   messages.replaceChildren();
   welcome.hidden = true;
 
-  currentChat.forEach(m => addMessage(m.role, m.text));
+  currentChat.forEach((item) => {
+    addMessage(item.role, item.text);
+  });
+
   $("sidebar").classList.remove("open");
 }
 
 function newChat() {
-  saveCurrentChat();
+  updateCurrentChat();
+
   currentChat = [];
+  currentChatId = null;
+
   messages.replaceChildren();
   welcome.hidden = false;
+
+  $("sidebar").classList.remove("open");
 }
 
 async function sendMessage(text) {
@@ -139,15 +221,23 @@ async function sendMessage(text) {
   busy = true;
   $("sendBtn").disabled = true;
 
+  if (!currentChatId) {
+    currentChatId = String(Date.now());
+  }
+
   const history = currentChat
-    .slice(-12)
-    .map(m => ({
-      role: m.role === "bot" ? "assistant" : "user",
-      text: m.text
+    .slice(-10)
+    .map((item) => ({
+      role: item.role === "bot" ? "assistant" : "user",
+      text: item.text
     }));
 
   addMessage("user", text);
-  currentChat.push({ role: "user", text });
+
+  currentChat.push({
+    role: "user",
+    text
+  });
 
   const loading = addMessage(
     "bot",
@@ -173,19 +263,23 @@ async function sendMessage(text) {
       throw new Error(data.reply || "Server error");
     }
 
-    loading.textContent = data.reply || "No response";
+    loading.textContent =
+      data.reply ||
+      (english ? "No response received." : "لم يصل رد من AI M.");
 
     currentChat.push({
       role: "bot",
       text: loading.textContent
     });
 
-  } catch (error) {
-    loading.textContent = english
-      ? "Something went wrong. Please try again."
-      : "حصل خطأ أثناء الاتصال. حاول مرة تانية.";
+    updateCurrentChat();
 
-    console.error(error);
+  } catch (error) {
+    console.error("AI M error:", error);
+
+    loading.textContent = english
+      ? "Connection error. Please try again."
+      : "حصل خطأ أثناء الاتصال بـ AI M. حاول مرة تانية.";
   }
 
   busy = false;
@@ -193,10 +287,11 @@ async function sendMessage(text) {
   input.focus();
 }
 
-form.addEventListener("submit", event => {
+form.addEventListener("submit", (event) => {
   event.preventDefault();
 
   const text = input.value;
+
   input.value = "";
   input.style.height = "auto";
 
@@ -225,7 +320,7 @@ $("languageBtn").onclick = () => {
   updateLanguage();
 };
 
-document.querySelectorAll(".suggestion").forEach(button => {
+document.querySelectorAll(".suggestion").forEach((button) => {
   button.onclick = () => {
     sendMessage(
       english
